@@ -1,0 +1,640 @@
+<!-- Author: Sam Adkins -->
+<!-- This is intended to be an estimation assistant for Bryant Grout and Tile.
+    The goal is to have an easy to navigate page that can be used to enter various materials
+    and their costs so that this program calculates a quote estimate quickly and efficiently. -->
+
+<!-- TODO: 
+    * Meet with Lauren/Parker and get more info about how they do estimates by hand
+        - get feedback on current design, and see if they have any suggestions
+    * Ask if they want the program to be able to save the calculations into a page that they can 
+        download and print out for the customer (or themselves)
+        - ask about formatting for the page
+        - https://www.codexworld.com/convert-html-to-pdf-using-javascript-jspdf/ is a link that could help with this
+        - https://www.geeksforgeeks.org/how-to-design-runtime-generated-pdf-via-html/ is another link that could help with this
+    * Add functionality to the job selection list
+        - this will likely be some implementation of a per-hour cost of labor, but maybe not
+        - remove this if deemed unecessarry
+    * Figure out where to add in the labor cost calculations
+        - either in the job selection list, or in the material dropdown 
+    * Finish up the aesthetic design elements so it looks nice 
+    * Maybe: Figure out how to get the favicon working-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="estStyle.css">
+    <title>BG&T Estimation Machine</title>
+    <!-- <link rel="icon" type="image/x-icon" href="./images/bgtpnglogo.png"> -->
+    <link rel="icon" type="image/png" href="../images/bgtpnglogo.png" />
+    <!-- <script src="Estimator.py"></script> -->
+    <!-- <script src="stylingHelper.js"></script> -->
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+    <!-- jsPDF library -->
+    <!-- <script src="js/jsPDF/dist/jspdf.umd.js"></script> -->
+    <script>
+        // empty json object that stores all the job types and their prices
+        var jobTypes = {};
+        var totalEstimation = 0;
+        var totalMaterialEst = 0;
+        var totalLaborEst = 0;
+
+        // when a csv file is selected, read the file and populate the job-type-datalist with the job types
+        $(document).ready(function(){
+            $("#labor-costs").change(function(){
+                // get the file
+                var file = document.getElementById("labor-costs").files[0];
+                // create a new file reader
+                var reader = new FileReader();
+                // when the file is loaded, convert the csv file to json
+                reader.onload = function(e){
+                    // get the data from the file
+                    var data = e.target.result;
+                    // split the data into an array of lines
+                    var lines = data.split("\n");
+                    // convert the array of lines into an array of objects
+                    var result = [];
+                    var headers = lines[0].split(",");
+                    for (var i = 1; i < lines.length; i++){
+                        var obj = {};
+                        var currentLine = lines[i].split(",");
+                        for (var j = 0; j < headers.length; j++){
+                            // if the currentline has quotation marks that are not directly preceeded by a number, remove them
+                            if (currentLine[j].includes("\"")){
+                                var match = currentLine[j].match(/(\d+)\"/);
+                                // remove the quotation marks from the string
+                                currentLine[j] = currentLine[j].replace(/"/g, '');
+                                // find the number that matches the number in match and replace it with the number followed by a quotation mark
+                                if (match != null){
+                                    currentLine[j] = currentLine[j].replace(match[1], match[0]);
+                                }
+                            }
+                            obj[headers[j]] = currentLine[j];
+                        }
+                        // if the line item has no price, skip it
+                        if (obj["Price"] == ""){
+                            continue;
+                        }
+                        result.push(obj);
+                    }
+                    // populate the job-type-datalist with the job types
+                    for (var i = 0; i < result.length; i++){
+                        // create a new option with the value of the price and the text of the line item
+                        newOpt = document.createElement("option");
+                        var priceString = result[i]["Price"];
+                        // create a json object with the job type, max price, min price, price, and units
+                        jobTypes[result[i]["Line Item"]] = {"maxPrice": 0, "minPrice": 0, "price": 0, "units": result[i]["Units"]};
+
+                        // if the price is a range, create minPrice and maxPrice attributes for the option
+                        if (priceString.includes("-")){
+                            // remove all spaces from the string
+                            priceString = priceString.replace(/\s/g, '');
+                            // split the string into an array of the min and max prices
+                            var priceArray = priceString.split("-");
+                            // if there is a $ in the string, remove it
+                            if (priceArray[0].includes("$")){
+                                priceArray[0] = priceArray[0].substring(1);
+                            }
+                            if (priceArray[1].includes("$")){
+                                priceArray[1] = priceArray[1].substring(1);
+                            }
+                            // update the jobtypes json object with the min and max prices
+                            jobTypes[result[i]["Line Item"]]["maxPrice"] = priceArray[1];
+                            jobTypes[result[i]["Line Item"]]["minPrice"] = priceArray[0];
+                            // get the min and max price and convert to a float
+                            var minPrice = parseFloat(priceArray[0]);
+                            var maxPrice = parseFloat(priceArray[1]);
+                            // get the average of the min and max prices
+                            var avgPrice = (minPrice + maxPrice) / 2;
+                            // round the average price to 2 decimal places
+                            avgPrice = avgPrice.toFixed(2);
+                            // update the jobtypes json object with the price
+                            jobTypes[result[i]["Line Item"]]["price"] = avgPrice;
+
+                        }
+                        else{ // if the price is a single number, create a price attribute for the option
+                            priceString = priceString.substring(1);
+                            // update the jobtypes json object with the price
+                            jobTypes[result[i]["Line Item"]]["price"] = priceString;
+                        }
+                        newOpt.value = result[i]["Line Item"];
+                        $("#job-type-datalist").append(newOpt);
+                    }
+                };
+                // read the file
+                reader.readAsText(file);
+            });
+        });
+
+        // when the job-selector input is changed, update the labor-units-label to match the units of the job
+        $(document).ready(function(){
+            $("#job-selector").on("input", function(){
+                // get the price of the job from the jobTypes json object
+                var jobPrice = jobTypes[$("#job-selector").val()]["price"];
+                // get the units of the job from the jobTypes json object
+                var jobUnits = jobTypes[$("#job-selector").val()]["units"];
+                // update the labor-units-label to match the units of the job
+                $("#lul-span").text(jobUnits);
+                // if the jobtype object has a min and max price, update the price slider to match the range of the job, then show the slider
+                if (jobTypes[$("#job-selector").val()]["minPrice"] != 0){
+                    // update the price slider to match the range of the job
+                    $("#price-slider").attr("min", jobTypes[$("#job-selector").val()]["minPrice"]);
+                    $("#price-slider").attr("max", jobTypes[$("#job-selector").val()]["maxPrice"]);
+                    $("#price-slider").attr("value", jobTypes[$("#job-selector").val()]["price"]);
+                    // update the price value span to match the price of the job
+                    $("#price-value").text(jobTypes[$("#job-selector").val()]["price"]);
+                    // show the price slider
+                    $("#price-slider-div").show();
+                }
+                else{ // if the jobtype object only has a single price, hide the price slider
+                    $("#price-slider-div").hide();
+                }
+                // set the value of the labor-units input to 1
+                $("#labor-units").val("1");
+                // update the total labor cost span
+                $("#labor-cost-span").text("$" + jobPrice);
+
+            });
+        });
+
+        // if the labor cost slider is moved, update the labor cost span
+        $(document).on("input", "#price-slider", function(){
+            $("#price-value").text($(this).val());
+            // set the price of the job to the value of the slider
+            jobTypes[$("#job-selector").val()]["price"] = $(this).val();
+            // set the total labor cost to be the price of the job multiplied by the number of units
+            $("#labor-cost-span").text("$" + ($(this).val() * $("#labor-units").val()).toFixed(2));
+        });
+
+        // if the labor units input is changed, update the total labor cost span
+        $(document).on("input", "#labor-units", function(){
+            // get the number of units
+            var units = $(this).val();
+            // get the price of the labor
+            var price = jobTypes[$("#job-selector").val()]["price"];
+            // multiply the price by the number of units
+            var totalCost = price * units;
+            // round the total cost to 2 decimal places
+            totalCost = totalCost.toFixed(2);
+            // update the total labor cost span
+            $("#labor-cost-span").text("$" + totalCost);
+        });
+
+        // when the add-labor-cost button is clicked, add the labor cost to the estimated-costs select box
+        $(document).on("click", "#add-labor-cost", function(){
+            // get the job type
+            var jobType = $("#job-selector").val();
+            // get the number of units
+            var units = $("#labor-units").val();
+            // get the price of the labor
+            var price = jobTypes[jobType]["price"];
+            // multiply the price by the number of units
+            var totalLaborCost = price * units;
+            // round the total cost to 2 decimal places
+            totalLaborCost = totalLaborCost.toFixed(2);
+
+            totalLaborEst += parseFloat(totalLaborCost);
+            totalEstimation += parseFloat(totalLaborCost);
+
+            console.log("total est in add labor: " + totalEstimation.toFixed(2));
+            // update the total cost paragraph
+            $("#total-overall-cost").text("$" + totalEstimation);
+            $("#total-overall-cost").attr("value", totalEstimation);
+            // add the labor cost to the estimated-labor-costs select box
+            $("#estimated-labor-costs").append("<option>" + jobType + " - $" + totalLaborCost + "</option>");
+            // increase the size of the estimated-costs select element by 1 to fit the new option
+            $("#estimated-labor-costs").attr("size", (parseInt($("#estimated-labor-costs").attr("size")) + 1).toString());
+            // // update total-labor-estimate span
+            $("#total-labor-estimate").text("$" + totalLaborEst.toFixed(2));
+            
+            // update estimated profit span
+            $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
+            $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
+
+        });
+
+        // when the remove-labor-cost button is clicked, remove the selected cost from the estimated costs select element, and reduce the size by 1
+        $(document).on("click", ".remove-labor-cost", function(){
+            var costToRemove = $("estimated-labor-costs option:selected").val();
+            // remove the selected option from the estimated-costs select element
+            $("#estimated-labor-costs option:selected").remove();
+            // decrease the size of the estimated-costs select element by 1
+            $("#estimated-labor-costs").attr("size", (parseInt($("#estimated-labor-costs").attr("size")) - 1).toString());
+
+            totalLaborEst = totalLaborEst - parseFloat(costToRemove);
+            totalEstimation = totalMaterialEst + totalLaborEst;
+
+            // update the total cost paragraph
+            $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
+            $("#total-labor-estimate").text("$" + totalLaborEst.toFixed(2));
+
+            // update estimated profit span
+            $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
+            $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
+        });
+
+        $(document).ready(function(){
+            // function that takes the data from the material-cost-input-form and calculates the estimated cost of all materials
+            // and then populates the estimated-costs select box with that information
+            // prevent default form submission
+            $("input[type='submit']").click(function(){
+                event.preventDefault();
+                var costToAdd = 0;
+                // if the material type is tile, calculate the estimated cost of the tile
+                if ($("#tile").is(":checked")){
+                    // get the cost per square foot of the tile
+                    var costSqft = $("#cost-sqft").val();
+                    // get the total area of the job
+                    var totalArea = $("#total-area").attr("value");
+                    // calculate the estimated cost of the tile
+                    var tileCost = costSqft * totalArea;
+                    costToAdd = tileCost;
+                    // round the tile cost to 2 decimal places
+                    tileCost = tileCost.toFixed(2);
+                    // get type of tile
+                    var tileType = $("#tile-type").val();
+                    // add the tile cost to the estimated-costs select box
+                    if (tileType == ""){
+                        $("#estimated-material-costs").append("<option>Tile - $" + tileCost + "</option>");
+                    }
+                    else{
+                        $("#estimated-material-costs").append("<option>Tile - " + tileType + " - $" + tileCost + "</option>");
+                    }
+                    // increase the size of the estimated-costs select element by 1 to fit the new option
+                    $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+                }
+                else if ($("#other-material").is(":checked")){
+                    var materialName = $("#material-name").val();
+                    var materialCostPer = $("#material-cost-per").val();
+                    var materialUnits = $("#material-units").val();
+                    var materialCost = materialCostPer * materialUnits;
+                    materialCost = materialCost.toFixed(2);
+                    costToAdd = materialCost;
+                    var materialCostString = materialName + " - $" + materialCost;
+                    $("#estimated-material-costs").append("<option>" + materialCostString + "</option>");
+                    // increase the size of the estimated-costs select element by 1 to fit the new option
+                    $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+                }
+                else if ($("#grout").is(":checked")){
+                    var groutCost = $("#grout-cost").val();
+                    var groutUnits = $("#grout-units").val();
+                    costToAdd = groutCost * groutUnits;
+                    var groutCostString = "Grout - $" + ((groutCost * groutUnits).toFixed(2));
+                    $("#estimated-material-costs").append("<option>" + groutCostString + "</option>");
+                    // increase the size of the estimated-costs select element by 1 to fit the new option
+                    $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+                }
+                else if ($("#caulk").is(":checked")){
+                    var caulkCost = $("#caulk-cost").val();
+                    var caulkUnits = $("#caulk-units").val();
+                    costToAdd = caulkCost * caulkUnits;
+                    var caulkCostString = "Caulk - $" + ((caulkCost * caulkUnits).toFixed(2));
+                    $("#estimated-material-costs").append("<option>" + caulkCostString + "</option>");
+                    // increase the size of the estimated-costs select element by 1 to fit the new option
+                    $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+                }
+                else if ($("#sealant").is(":checked")){
+                    var sealantCost = $("#sealant-cost").val();
+                    var sealantUnits = $("#sealant-units").val();
+                    costToAdd = sealantCost * sealantUnits;
+                    var sealantCostString = "Color Seal - $" + ((sealantCost * sealantUnits).toFixed(2));
+                    $("#estimated-material-costs").append("<option>" + sealantCostString + "</option>");
+                    // increase the size of the estimated-costs select element by 1 to fit the new option
+                    $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+                }
+
+                totalMaterialEst += costToAdd;
+                totalEstimation = totalMaterialEst + totalLaborEst;
+                // update the total cost paragraph
+                $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
+
+                // update the total-material-estimate span
+                $("#total-material-estimate").text("$" + totalMaterialEst.toFixed(2));
+
+                // update estimated profit span
+                $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
+                $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
+
+                // reset all form inputs
+                $("#material-costs-input-form").trigger("reset");
+                $("#surface-table tbody").empty();
+                $("#total-area").attr("value", "0");
+                $("#total-area").text("0");
+                $("#caulk-cost").val("");
+                $("#caulk-units").val("");
+                $("#sealant-cost").val("");
+                $("#sealant-units").val("");
+                $("#grout-cost").val("");
+                $("#grout-units").val("");
+                $("#cost-sqft").val("");
+                $("#material-name").val("");
+                $("#material-cost-per").val("");
+                $("#material-units").val("");
+                $("#surface-name").val("");
+                $("#surface-height").val("");
+                $("#surface-width").val("");
+                $("#tile-type").val("");
+
+                
+            });
+        });
+        // function that adds a new row to the surface table
+        // the row contains the surface name, height, width, and area
+        // the area is calculated by multiplying the height and width
+        $(document).ready(function(){
+            $("#add-surfaces").click(function(){
+                var surfaceName = $("#surface-name").val();
+                var surfaceHeight = $("#surface-height").val();
+                var surfaceWidth = $("#surface-width").val();
+                var surfaceArea = surfaceHeight * surfaceWidth;
+                // round the tile area to 3 decimal places
+                surfaceArea = surfaceArea.toFixed(3);
+                // create a button that will remove the row from the table when clicked
+                var removeButton = "<button class='remove-surface-button rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue'>Remove</button>";
+                // add the new row to the surface table with the surface name, height, width, area, and remove button
+                $("#surface-table").append("<tr><td>" + surfaceName + "</td><td>" + surfaceHeight + "</td><td>" + surfaceWidth + "</td><td>" + surfaceArea + "</td><td>" + removeButton + "</td></tr>");
+                // add the area of the new surface to the total area and update the total area span
+                var totalArea = $("#total-area").attr("value");
+                totalArea = parseFloat(totalArea);
+                totalArea += parseFloat(surfaceArea);
+                $("#total-area").attr("value", (totalArea).toString());
+                $("#total-area").text($("#total-area").attr("value"));
+                // clear the input fields
+                $("#surface-name").val("");
+                $("#surface-height").val("");
+                $("#surface-width").val("");
+
+            });
+        });
+
+        // when the remove button is clicked in the surface table, remove the row from the table
+        // and subtract the area of the surface from the total area
+        $(document).on("click", ".remove-surface-button", function(){
+            // get the area of the surface that is being removed
+            var surfaceArea = $(this).parent().prev().text();
+            // subtract the area of the surface from the total area
+            $("#total-area").attr("value", (parseFloat($("#total-area").attr("value")) - surfaceArea).toString());
+            // round the total area to 3 decimal places
+            $("#total-area").attr("value", parseFloat($("#total-area").attr("value")).toFixed(3));
+            $("#total-area").text($("#total-area").attr("value"));
+            // remove the row from the table
+            $(this).parent().parent().remove();
+        });
+
+        // when the remove-cost button is clicked, remove the selected cost from the estimated costs select element, and reduce the size by 1
+        $(document).on("click", ".remove-material-cost", function(){
+            var costToRemove = $("estimated-material-costs option:selected").val();
+            // remove the selected option from the estimated-costs select element
+            $("#estimated-material-costs option:selected").remove();
+            // decrease the size of the estimated-costs select element by 1
+            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) - 1).toString());
+
+            totalMaterialEst -= parseFloat(costToRemove);
+            totalEstimation = totalMaterialEst + totalLaborEst;
+            // update the total cost paragraph
+            $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
+            $("#total-material-estimate").text("$" + totalMaterialEst.toFixed(2));
+
+            // update estimated profit span
+            $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
+            $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
+        });
+
+        // when the vibe slider is moved, update the vibe value span
+        $(document).on("input", "#vibe-slider", function(){
+            $("#vibe-value").text($(this).val());
+            // multiply the total estimated labor cost by the value of the slider
+            totalLaborEst *= $(this).val();
+            
+            totalEstimation = totalMaterialEst + totalLaborEst;
+            // update the total cost paragraph
+            $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
+            // update the total labor cost span
+        });
+
+        // when the generate pdf button is clicked, open a new tab with the pdf layout of the estimator's breakddown.
+        // send the information from the estimator to the pdf layout
+        $(document).ready(function(){   
+            $("#generate-pdf").click(function(){
+                // get the job type
+                var jobType = "";
+                if ($("#installation").is(":checked")){
+                    jobType += "Installation ";
+                }
+                if ($("#replacement").is(":checked")){
+                    jobType += "Replacement ";
+                }
+                if ($("#cleaning").is(":checked")){
+                    jobType += "Cleaning ";
+                }
+                if ($("#sealing").is(":checked")){
+                    jobType += "Sealing ";
+                }
+                if ($("#regrout").is(":checked")){
+                    jobType += "Re-grouting ";
+                }
+                if ($("#recaulk").is(":checked")){
+                    jobType += "Re-caulking ";
+                }
+                if ($("#other-job").is(":checked")){
+                    jobType += "Other ";
+                }
+                // get the total cost
+                var totalCost = $("#total-overall-cost").text();
+                // get the material costs   
+                var materialCosts = "";
+                $("#estimated-material-costs option").each(function(){
+                    materialCosts += $(this).text() + ", ";
+                });
+                // get the labor costs
+                var laborCosts = "";
+                // open the Print-Estimation.html page in a new tab and save the estimation information to local storage so it can be accessed from the new tab
+                var newWindow = window.open("Print-Estimation.html", "_blank");
+                localStorage.setItem("jobType", jobType);
+                localStorage.setItem("totalCost", totalCost);
+                localStorage.setItem("materialCosts", materialCosts);
+                localStorage.setItem("laborCosts", laborCosts);
+
+            });
+        });
+        
+    </script>
+
+</head>
+
+<body>
+    <!-- Header with logo and Company Name -->
+    <header class="flex items-center bg-bgt-blue">
+        <img src="../images/BryantGroutandTileLOGO.webp" alt="BGT Logo" class="ml-6 mt-5 mb-6 size-1/12">
+        <h1 class="text-white ml-10 text-3xl font-semibold">Bryant Grout and Tile Estimation Helper</h1>
+        <!-- select a csv file to fill out the labor cost combobox -->
+        <form action="" class="ml-10 text-white justify-self-end ">
+            <label for="labor-costs">Update Google Sheet:</label>
+            <input type="file" id="labor-costs" name="labor-costs" accept=".csv">
+        </form>
+        
+    </header>
+
+    <div id="body" class="m-10 ml-5">
+        <!-- Form for entering job information -->
+        <!-- checkboxes for selecting job type. Multiple types of jobs can be selected at once -->
+        <div class="input-boxes grid grid-cols-4 gap-8 mx-32 justify-items-start">
+            <!-- this is useless right now, but in the future the type of job may have an impace I am not aware of on the estimation! -->
+            
+            <!-- labor cost calcualtions -->
+            <div class="labor-cost-box justify-evenly w-full col-span-1 row-start-1 col-start-1 space-y-3">
+                <h2>Labor Cost Information</h2>
+                <label>Select Job:</label>
+                    <input id="job-selector" list="job-type-datalist" class="border-2 border-bgt-blue" placeholder="Select Job Type"/></label>
+                    <datalist id="job-type-datalist">
+                    </datalist>
+                <br>
+                <label for="labor-units" value="Here" id="labor-units-label"><span id="lul-span" value="Units"></span></label>
+                <input type="number" id="labor-units" name="labor-units" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                <br><div id="price-slider-div" class="flex-col space-y-3" hidden>
+                    <label for="price-slider">Price Range Adjustment: $<span id="price-value" value="0"></span></label>
+                    <input type="range" 
+                        class="transparent h-[4px] w-full cursor-pointer appearance-none border-transparent bg-grey accent-bgt-blue active:accent-bgt-dark-blue" 
+                        id="price-slider" min="0" max="0" step="0.01"/>
+                </div>
+                <p id="total-labor-cost" class="font-semibold text-lg">Total Labor Cost: <span id="labor-cost-span"></span></p>
+                
+                <input type="button" id="add-labor-cost" name="add-labor-cost" value="Add" class="rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue">
+                
+            </div>
+
+
+            <!-- form for entering material Cost information -->
+            <div class="material-cost-box flex-col justify-evenly w-full col-span-2 row-start-1 col-start-2">
+                <h2>Material Cost Information</h2>
+                <form action="Estimator.html" id="material-costs-input-form" method="post" class="space-y-3 flex-col w-full">
+                    <label for="material">Material:</label>
+
+                    <!-- select box for selecting material type -->
+                    <select name="material" id="material" size="1" class="peer rounded-sm border-bgt-blue border-2">
+                        <option value="none" id="none">Select Material</option>
+                        <option value="tile" id="tile">Tile</option>
+                        <option value="grout" id="grout">Grout</option>
+                        <option value="caulk" id="caulk">Caulk</option>
+                        <option value="sealer" id="sealant">Color Seal</option>
+                        <option value="other" id="other-material">Other</option>
+                        <option value="vibes" id="vibes">Vibe Check</option>
+                    </select><br>
+
+                    <div id="general-inputs" class="hidden peer-has-[#other-material:checked]:block space-y-3">
+                        <label for="material-name">Custom Material:</label>
+                        <input type="" id="material-name" name="material-name" class="border-2 border-bgt-blue rounded-sm">
+                        <br>
+                        <label for="material-cost">Cost per Unit:</label>
+                        <input type="number" id="material-cost-per" name="material-cost-per" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <label for="material-units">Units:</label>
+                        <input type="number" id="material-units" name="material-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                    </div>
+
+                    <div id="tile-inputs" class="hidden peer-has-[#tile:checked]:block flex-col space-y-3">
+                        <p for="tile-type" class="text-md font-bold">Type of Tile:</p>
+                        <input type="text" id="tile-type" name="tile-type" class="border-2 border-bgt-blue rounded-sm" placeholder="Tile Type (optional)"><br>
+
+                        <p for="dimensions" class="text-md font-bold">Dimensions of Job:</p>
+                        <div id="surface-dimensions" class="flex-col space-y-3">
+                            <p class="text-md font-semibold">Add Surfaces:</p>
+                            <label for="surface-name">Surface:</label>
+                            <input type="text" id="surface-name" name="surface-name" class="border-2 border-bgt-blue rounded-sm" placeholder="Surface Name (optional)">
+                            <br>
+                            <label for="surface-height">Height:</label>
+                            <input type="number" id="surface-height" name="surface-height" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00">
+                            <br>
+                            <label for="surface-width">Width:</label>
+                            <input type="number" id="surface-width" name="surface-width" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00">
+                            <br>
+                            <input type="button" id="add-surfaces" name="add-surfaces" value="Add Surface" class="rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue">
+                            <table id="surface-table" class="border-2 border-bgt-blue border-separate border-spacing-x-5">
+                                <thead>
+                                    <tr>
+                                        <th>Surface</th>
+                                        <th>Height</th>
+                                        <th>Width</th>
+                                        <th>Area</th>
+                                        <th>Remove</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                            <p class="text-md font-semibold">Total Area: <span id="total-area" value="0">0</span></p>
+                        </div>
+
+                        <label for="cost-sqft">Cost Per Square Foot</label>
+                        <input type="number" id="cost-sqft" name="cost-sqft" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+
+                    </div>
+
+                    <div id="grout-inputs" class="hidden peer-has-[#grout:checked]:block flex-col space-y-3">
+                        <!-- note: this might be temporary, as I kinda want to add a calculation for how much grout is needed as well. 
+                            I just don't know how to calculate that yet -->
+                        <label for="grout-cost">Cost Per Unit:</label>
+                        <input type="number" id="grout-cost" name="grout-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <label for="grout-units">Units:</label>
+                        <input type="number" id="grout-units" name="grout-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                    </div>
+
+                    <!-- note: temporary! Until I get more info about how this is calcuated from Parker and Lauren -->
+                    <div id="caulk-inputs" class="hidden peer-has-[#caulk:checked]:block flex-col space-y-3">
+                        <label for="caulk-cost">Cost Per Unit:</label>
+                        <input type="number" id="caulk-cost" name="caulk-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <label for="caulk-units">Units:</label>
+                        <input type="number" id="caulk-units" name="caulk-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                    </div>
+
+                    <!-- note: temporary! Until I get more info about how this is calcuated from Parker and Lauren -->
+                    <div id="sealant-inputs" class="hidden peer-has-[#sealant:checked]:block flex-col space-y-3">
+                        <label for="sealant-cost">Cost Per Unit:</label>
+                        <input type="number" id="sealant-cost" name="sealant-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <label for="sealant-units">Units:</label>
+                        <input type="number" id="sealant-units" name="sealant-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                    </div>
+
+                    <div id="vibe-check-input" class="hidden peer-has-[#vibes:checked]:block flex-col space-y-3">
+                        <label for="vibe-check">Vibe Check: x<span id="vibe-value" value="0"></span></label>
+                        <!-- figure out how to make a slider. the slider will act as a multiplier for the cost -->
+                        <input type="range" 
+                            class="transparent h-[4px] w-full cursor-pointer appearance-none border-transparent bg-grey accent-bgt-blue active:accent-bgt-dark-blue" 
+                            id="vibe-slider" min="0.5" max="1.5" step="0.01"/>
+                    </div>
+
+                    <input type="submit" value="Submit" class="rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue peer-has-[#none:checked]:hidden">
+
+
+                </form>
+            </div>
+
+            <!-- select box that stores the entered material costs from the material cost form -->
+            <div class="cost-box w-full col-span-1">
+                <h2 class="font-bold text-xl">Total Cost:</h2>
+                <p id="total-overall-cost" class="font-semibold text-lg" value="0">$0.00</p> 
+                <br>
+
+                <h2>Material Costs: <span id="total-material-estimate"></span></h2>
+                <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-full">
+                </select>
+                <input type="button" class="remove-material-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
+                <br>
+                <h2>Labor Costs: <span id="total-labor-estimate"></span></h2>
+                <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-full">
+                </select>
+                <input type="button" class="remove-labor-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
+            
+                <br>
+                <h2>Estimated Profit:</h2> <span class="text-dark-grey">(Labor Cost - Material Cost)</span>
+                <p id="estimated-profit" class="font-semibold text-lg" value="0">$0.00</p>
+            </div>
+            
+        </div>
+        <input type="button" id="generate-pdf" value="Generate PDF" class="rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue">
+    </div>
+    
+</body>
+
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+    <meta charset="UTF-8">
+    <title>Print Estimation</title>
+    <script src="https://printjs-4de6.kxcdn.com/print.min.js"></script>   
+    <link rel="stylesheet" href="estStyle.css" media="all">
+    <link rel="icon" type="image/png" href="../images/bgtpnglogo.png" />
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+    <script>
+        var jobType = localStorage.getItem("jobType");
+        var totalCost = localStorage.getItem("totalCost");
+        var materialCosts = localStorage.getItem("materialCosts");
+        var laborCosts = localStorage.getItem("laborCosts");
+        // the previous page sent this window info like this: "newWindow.jobType = jobType;", so this window should catch it here
+        // and then display it on the page
+        $(document).ready(function() {
+            $("#pdf-job-type").text(jobType);
+            $("#pdf-total-cost").text(totalCost);
+            // $("#pdf-material-costs").text(materialCosts);
+            $("#pdf-labor-costs").text(laborCosts);
+            // var materialTable = sessionStorage.getItem("materialTable");
+            // $("#pdf-material-table tbody").html(materialTable);
+            // $("#pdf-material-table tbody").append(materialTable);
+            // break apart the material cost string into an array of all the materials and their costs
+            var materialCostsArray = materialCosts.split(",");
+            // add all the individual costs together to get the total material cost and display it on the page
+            var totalMaterialCost = 0;
+            for (var i = 0; i < materialCostsArray.length; i++) {
+                var materialCost = materialCostsArray[i].split(":");
+                totalMaterialCost += parseFloat(materialCost[1]);
+            }
+            $("#pdf-material-costs").text(totalMaterialCost);
+
+            // loop through the array and add each material and its cost to the table
+            for (var i = 0; i < materialCostsArray.length; i++) {
+                var materialCost = materialCostsArray[i].split(":");
+                $("#pdf-material-table tbody").append("<tr><td>" + materialCost[0] + "</td><td>" + materialCost[1] + "</td></tr>");
+            }
+            // print the page
+
+            // printJS('pdf-zone', 'html');
+        });
+    </script>
+</head>
+<body id="body" class="m-auto shadow-lg w-[850px] h-[1100px] bg-white p-20">
+    
+   <style>
+        @media only print {
+            body {
+                visibility: hidden;
+            }
+            #pdf-zone, #pdf-zone * {
+                visibility: visible;
+            }
+            #pdf-zone {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+            }
+        }
+    </style>
+
+    <div id="outer-formatting" class="w-full p-0">
+        <div id="pdf-zone" class="p-0">
+            <!-- Header with logo and Company Name -->
+            <header class="flex items-center bg-bgt-blue">
+                <img src="../images/BryantGroutandTileLOGO.webp" alt="BGT Logo" class="ml-6 mt-5 mb-6 size-1/12">
+                <h1 class="text-white ml-10 text-3xl font-semibold">Bryant Grout and Tile Estimator-inator 3000</h1>
+            </header>
+
+            <div id="pdf-content">
+                <h2 class="text-2xl font-semibold">Estimated Cost Breakdown</h2>
+                <p class="text-xl font-semibold">Job Type: <span id="pdf-job-type"></span></p>
+                <p class="text-xl font-semibold">Total Cost: <span id="pdf-total-cost"></span></p>
+                <p class="text-xl font-semibold">Material Costs: <span id="pdf-material-costs"></span> </p>
+                <table id="pdf-material-table" class="border-2 border-bgt-blue border-separate border-spacing-x-5">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <p class="text-xl font-semibold">Labor Costs: <span id="pdf-labor-costs"></span></p>
+                
+            </div>
+        </div>
+    </div>
+</body>
+</html>
