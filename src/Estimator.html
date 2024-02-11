@@ -172,11 +172,11 @@
                     </div>
 
                     <div id="vibe-check-input" class="hidden peer-has-[#vibes:checked]:block flex-col space-y-3">
-                        <label for="vibe-check">Vibe Check: x<span id="vibe-value" value="0"></span></label>
+                        <label for="vibe-check">Vibe Check: x<span id="vibe-value" value="1"></span></label>
                         <!-- figure out how to make a slider. the slider will act as a multiplier for the cost -->
                         <input type="range" 
                             class="transparent h-[4px] w-full cursor-pointer appearance-none border-transparent bg-grey accent-bgt-blue active:accent-bgt-dark-blue" 
-                            id="vibe-slider" min="0.5" max="1.5" step="0.01"/>
+                            id="vibe-slider" min="0.5" max="1.5" step="0.01" value="1"/>
                     </div>
 
                     <input type="submit" value="Submit" class="rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue peer-has-[#none:checked]:hidden">
@@ -192,12 +192,12 @@
                 <br>
 
                 <h2>Material Costs: <span id="total-material-estimate"></span></h2>
-                <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-full">
+                <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-fit">
                 </select>
                 <input type="button" class="remove-material-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
                 <br>
                 <h2>Labor Costs: <span id="total-labor-estimate"></span></h2>
-                <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-full">
+                <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-fit">
                 </select>
                 <input type="button" class="remove-labor-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
             

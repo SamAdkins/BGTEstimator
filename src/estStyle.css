@@ -642,6 +642,11 @@ video {
   width: 100%;
 }
 
+.w-fit {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
 .border-separate {
   border-collapse: separate;
 }
@@ -790,6 +795,11 @@ video {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Roboto', sans-serif;
   font-size: larger;
+}
+
+.hover\:w-fit:hover {
+  width: -moz-fit-content;
+  width: fit-content;
 }
 
 .hover\:bg-bgt-dark-blue:hover {
