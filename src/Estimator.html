@@ -103,9 +103,9 @@
                         <input type="" id="material-name" name="material-name" class="border-2 border-bgt-blue rounded-sm">
                         <br>
                         <label for="material-cost">Cost per Unit:</label>
-                        <input type="number" id="material-cost-per" name="material-cost-per" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <input onchange="updateMaterialCost(this)" type="number" id="material-cost-per" name="material-cost-per" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
                         <label for="material-units">Units:</label>
-                        <input type="number" id="material-units" name="material-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                        <input onchange="updateMaterialUnits(this)" type="number" id="material-units" name="material-units" class="border-2 border-bgt-blue rounded-sm"><br>
                     </div>
 
                     <div id="tile-inputs" class="hidden peer-has-[#tile:checked]:block flex-col space-y-3">
@@ -142,7 +142,7 @@
                         </div>
 
                         <label for="cost-sqft">Cost Per Square Foot</label>
-                        <input type="number" id="cost-sqft" name="cost-sqft" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <input onchange="updateMaterialCost(this)" type="number" id="cost-sqft" name="cost-sqft" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
 
                     </div>
 
@@ -150,7 +150,7 @@
                         <!-- note: this might be temporary, as I kinda want to add a calculation for how much grout is needed as well. 
                             I just don't know how to calculate that yet -->
                         <label for="grout-cost">Cost Per Unit:</label>
-                        <input type="number" id="grout-cost" name="grout-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <input onchange="updateMaterialCost(this)" type="number" id="grout-cost" name="grout-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
                         <label for="grout-units">Units:</label>
                         <input type="number" id="grout-units" name="grout-units" class="border-2 border-bgt-blue rounded-sm"><br>
                     </div>
@@ -158,17 +158,17 @@
                     <!-- note: temporary! Until I get more info about how this is calcuated from Parker and Lauren -->
                     <div id="caulk-inputs" class="hidden peer-has-[#caulk:checked]:block flex-col space-y-3">
                         <label for="caulk-cost">Cost Per Unit:</label>
-                        <input type="number" id="caulk-cost" name="caulk-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <input onchange="updateMaterialCost(this)" type="number" id="caulk-cost" name="caulk-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
                         <label for="caulk-units">Units:</label>
-                        <input type="number" id="caulk-units" name="caulk-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                        <input onchange="updateMaterialUnits(this)" type="number" id="caulk-units" name="caulk-units" class="border-2 border-bgt-blue rounded-sm"><br>
                     </div>
 
                     <!-- note: temporary! Until I get more info about how this is calcuated from Parker and Lauren -->
                     <div id="sealant-inputs" class="hidden peer-has-[#sealant:checked]:block flex-col space-y-3">
                         <label for="sealant-cost">Cost Per Unit:</label>
-                        <input type="number" id="sealant-cost" name="sealant-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
+                        <input onchange="updateMaterialCost(this)" type="number" id="sealant-cost" name="sealant-cost" class="border-2 border-bgt-blue rounded-sm" min="0" step="0.01" placeholder="0.00"><br>
                         <label for="sealant-units">Units:</label>
-                        <input type="number" id="sealant-units" name="sealant-units" class="border-2 border-bgt-blue rounded-sm"><br>
+                        <input onchange="updateMaterialUnits(this)" type="number" id="sealant-units" name="sealant-units" class="border-2 border-bgt-blue rounded-sm"><br>
                     </div>
 
                     <div id="vibe-check-input" class="hidden peer-has-[#vibes:checked]:block flex-col space-y-3">

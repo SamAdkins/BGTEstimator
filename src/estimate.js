@@ -22,6 +22,11 @@ var totalLaborEst = 0;
 */
 var laborMultiplier = 1;
 
+/*
+    Material that is currently being created or changed
+*/
+var currentMaterial = null;
+
 // struct to hold the job type, max price, min price, price, and units
 function Job(jobType, maxPrice, minPrice, price, units){
     // auto incrementing id
@@ -45,9 +50,11 @@ var jobList = {};
 // struct representing a surface
 function Surface(name, height, width){
     // auto incrementing id
+    this.id = Surface.id++;
     this.name = name;
     this.height = height;
     this.width = width;
+    this.area = height * width;
 }
 
 // struct representing a material
@@ -58,6 +65,7 @@ function Material(name, costPer, units){
     this.costPer = costPer;
     this.units = units;
     this.surfaces = {};
+    this.totalArea = 0;
     this.totalCost = this.costPer * this.units;
 }
 
@@ -66,14 +74,21 @@ function Material(name, costPer, units){
 function updateMaterialArea(material){
     var totalArea = 0;
     for (var key in material.surfaces){
-        totalArea += material.surfaces[key].height * material.surfaces[key].width;
+        totalArea += material.surfaces[key].area;
     }
     material.units = totalArea;
+    material.totalArea = totalArea;
 }
 
 // function that adds a new surface to the surfaces json object in a Material object
 function addSurface(material, surface){
-    material.surfaces[surface.name] = surface;
+    material.surfaces[surface.id] = surface;
+    updateMaterialArea(material);
+}
+
+// function that removes a surface from the surfaces json object in a Material object
+function removeSurface(material, surface){
+    delete material.surfaces[surface.id];
     updateMaterialArea(material);
 }
 
@@ -280,7 +295,6 @@ $(document).on("click", "#add-labor-cost", function(){
     jobList[job.id] = job;
 
     totalLaborEst += parseFloat(totalLaborCost);
-    totalEstimation += parseFloat(totalLaborCost);
 
     console.log("total est in add labor: " + totalEstimation.toFixed(2));
 
@@ -339,6 +353,31 @@ $(document).on("click", ".remove-labor-cost", function(){
 // Start Material Cost Estimation Zone VVVVV
 
 
+// When a material is selected from the estimated-material-costs select box, get the struct representing that material
+// and store it as the currentMaterial
+$(document).on("change", "#estimated-material-costs", function(){
+    currentMaterial = materialList[$("#estimated-material-costs option:selected").attr("id")];
+});
+
+// when a material is selected from the material dropdown, update the currentMaterial object to match the selected material
+$(document).on("change", "#material-selector", function(){
+    var materialName = $("#material-selector").val();
+    currentMaterial = new Material(materialName, 0, 0);
+});
+
+// function that is passed the input box containing the cost of a material and updates the currentMaterial object to match the cost of material
+function updateMaterialCost(costInput){
+    var cost = costInput.value;
+    console.log("material cost: " + cost);
+    currentMaterial.costPer = cost;
+}
+
+// function that is passed the input box containing the units of a material and updates the currentMaterial object to match the units of material
+function updateMaterialUnits(unitsInput){
+    var units = unitsInput.value;
+    console.log("material units: " + units);
+    currentMaterial.units = units;
+}
 
 $(document).ready(function(){
     // function that takes the data from the material-cost-input-form and calculates the estimated cost of all materials
@@ -346,82 +385,99 @@ $(document).ready(function(){
     // prevent default form submission
     $("input[type='submit']").click(function(){
         event.preventDefault();
-        var costToAdd = 0;
+        
+        // add the currentMaterial to the materialList array
+        materialList[currentMaterial.id] = currentMaterial;
+        console.log("material list: " + JSON.stringify(materialList));
+        totalMaterialEst += currentMaterial.totalCost;
+
+        // create an option with the current material and append it to the estimated-material-costs select box
+        newMaterial = document.createElement("option");
+        newMaterial.value = currentMaterial.totalCost;
+        newMaterial.text = currentMaterial.name + " - $" + currentMaterial.totalCost;
+        newMaterial.name = currentMaterial.name;
+        newMaterial.id = currentMaterial.id;
+        $("#estimated-material-costs").append(newMaterial);
+        
+        // update the estimations
+        updateEstimation();
+
+
         // if the material type is tile, calculate the estimated cost of the tile
-        if ($("#tile").is(":checked")){
-            // get the cost per square foot of the tile
-            var costSqft = $("#cost-sqft").val();
-            // get the total area of the job
-            var totalArea = $("#total-area").attr("value");
-            // calculate the estimated cost of the tile
-            var tileCost = costSqft * totalArea;
-            costToAdd = tileCost;
-            // round the tile cost to 2 decimal places
-            tileCost = tileCost.toFixed(2);
-            // get type of tile
-            var tileType = $("#tile-type").val();
-            // add the tile cost to the estimated-costs select box
-            if (tileType == ""){
-                // modify so value is unique or id is unique
-                $("#estimated-material-costs").append("<option name='tile' value=" + tileCost + ">Tile - $" + tileCost + "</option>");
+        // if ($("#tile").is(":checked")){
+        //     // get the cost per square foot of the tile
+        //     var costSqft = $("#cost-sqft").val();
+        //     // get the total area of the job
+        //     var totalArea = $("#total-area").attr("value");
+        //     // calculate the estimated cost of the tile
+        //     var tileCost = costSqft * totalArea;
+        //     costToAdd = tileCost;
+        //     // round the tile cost to 2 decimal places
+        //     tileCost = tileCost.toFixed(2);
+        //     // get type of tile
+        //     var tileType = $("#tile-type").val();
+        //     // add the tile cost to the estimated-costs select box
+        //     if (tileType == ""){
+        //         // modify so value is unique or id is unique
+        //         $("#estimated-material-costs").append("<option name='tile' value=" + tileCost + ">Tile - $" + tileCost + "</option>");
 
-            }
-            else{
-                $("#estimated-material-costs").append("<option name='tile' value=" + tileCost +">Tile - " + tileType + " - $" + tileCost + "</option>");
-            }
-            // increase the size of the estimated-costs select element by 1 to fit the new option
-            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
-        }
-        else if ($("#other-material").is(":checked")){
-            var materialName = $("#material-name").val();
-            var materialCostPer = $("#material-cost-per").val();
-            var materialUnits = $("#material-units").val();
-            var materialCost = materialCostPer * materialUnits;
-            costToAdd = materialCost;
-            var materialCostString = materialName + " - $" + materialCost.toFixed(2);
-            $("#estimated-material-costs").append("<option name='other' value=" + materialCost.toFixed(2) +">" + materialCostString + "</option>");
-            // increase the size of the estimated-costs select element by 1 to fit the new option
-            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
-        }
-        else if ($("#grout").is(":checked")){
-            var groutCost = $("#grout-cost").val();
-            var groutUnits = $("#grout-units").val();
-            costToAdd = groutCost * groutUnits;
-            var groutCostString = "Grout - $" + ((groutCost * groutUnits).toFixed(2));
-            $("#estimated-material-costs").append("<option name='grout' value=" + (groutCost * groutUnits) +">" + groutCostString + "</option>");
-            // increase the size of the estimated-costs select element by 1 to fit the new option
-            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
-        }
-        else if ($("#caulk").is(":checked")){
-            var caulkCost = $("#caulk-cost").val();
-            var caulkUnits = $("#caulk-units").val();
-            costToAdd = caulkCost * caulkUnits;
-            var caulkCostString = "Caulk - $" + ((caulkCost * caulkUnits).toFixed(2));
-            $("#estimated-material-costs").append("<option name='caulk' value=" + (caulkCost * caulkUnits) + ">" + caulkCostString + "</option>");
-            // increase the size of the estimated-costs select element by 1 to fit the new option
-            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
-        }
-        else if ($("#sealant").is(":checked")){
-            var sealantCost = $("#sealant-cost").val();
-            var sealantUnits = $("#sealant-units").val();
-            costToAdd = sealantCost * sealantUnits;
-            var sealantCostString = "Color Seal - $" + ((sealantCost * sealantUnits).toFixed(2));
-            $("#estimated-material-costs").append("<option name='sealant' value=" + (sealantCost * sealantUnits) + ">" + sealantCostString + "</option>");
-            // increase the size of the estimated-costs select element by 1 to fit the new option
-            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
-        }
+        //     }
+        //     else{
+        //         $("#estimated-material-costs").append("<option name='tile' value=" + tileCost +">Tile - " + tileType + " - $" + tileCost + "</option>");
+        //     }
+        //     // increase the size of the estimated-costs select element by 1 to fit the new option
+        //     $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+        // }
+        // else if ($("#other-material").is(":checked")){
+        //     var materialName = $("#material-name").val();
+        //     var materialCostPer = $("#material-cost-per").val();
+        //     var materialUnits = $("#material-units").val();
+        //     var materialCost = materialCostPer * materialUnits;
+        //     costToAdd = materialCost;
+        //     var materialCostString = materialName + " - $" + materialCost.toFixed(2);
+        //     $("#estimated-material-costs").append("<option name='other' value=" + materialCost.toFixed(2) +">" + materialCostString + "</option>");
+        //     // increase the size of the estimated-costs select element by 1 to fit the new option
+        //     $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+        // }
+        // else if ($("#grout").is(":checked")){
+        //     var groutCost = $("#grout-cost").val();
+        //     var groutUnits = $("#grout-units").val();
+        //     costToAdd = groutCost * groutUnits;
+        //     var groutCostString = "Grout - $" + ((groutCost * groutUnits).toFixed(2));
+        //     $("#estimated-material-costs").append("<option name='grout' value=" + (groutCost * groutUnits) +">" + groutCostString + "</option>");
+        //     // increase the size of the estimated-costs select element by 1 to fit the new option
+        //     $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+        // }
+        // else if ($("#caulk").is(":checked")){
+        //     var caulkCost = $("#caulk-cost").val();
+        //     var caulkUnits = $("#caulk-units").val();
+        //     costToAdd = caulkCost * caulkUnits;
+        //     var caulkCostString = "Caulk - $" + ((caulkCost * caulkUnits).toFixed(2));
+        //     $("#estimated-material-costs").append("<option name='caulk' value=" + (caulkCost * caulkUnits) + ">" + caulkCostString + "</option>");
+        //     // increase the size of the estimated-costs select element by 1 to fit the new option
+        //     $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+        // }
+        // else if ($("#sealant").is(":checked")){
+        //     var sealantCost = $("#sealant-cost").val();
+        //     var sealantUnits = $("#sealant-units").val();
+        //     costToAdd = sealantCost * sealantUnits;
+        //     var sealantCostString = "Color Seal - $" + ((sealantCost * sealantUnits).toFixed(2));
+        //     $("#estimated-material-costs").append("<option name='sealant' value=" + (sealantCost * sealantUnits) + ">" + sealantCostString + "</option>");
+        //     // increase the size of the estimated-costs select element by 1 to fit the new option
+        //     $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+        // }
 
-        totalMaterialEst += costToAdd;
-        totalEstimation = totalMaterialEst + totalLaborEst;
+        // totalMaterialEst += costToAdd;
+        // totalEstimation = totalMaterialEst + totalLaborEst;
         // update the total cost paragraph
-        $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
+        // $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
 
-        // update the total-material-estimate span
-        $("#total-material-estimate").text("$" + totalMaterialEst.toFixed(2));
+        // // update the total-material-estimate span
+        // $("#total-material-estimate").text("$" + totalMaterialEst.toFixed(2));
 
-        // update estimated profit span
-        $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
-        $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
+        // // update estimated profit span
+        // $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
+        // $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
 
         // reset all form inputs
         $("#material-costs-input-form").trigger("reset");
@@ -448,6 +504,8 @@ $(document).ready(function(){
         
     });
 });
+
+
 // function that adds a new row to the surface table
 // the row contains the surface name, height, width, and area
 // the area is calculated by multiplying the height and width
@@ -459,14 +517,18 @@ $(document).ready(function(){
         var surfaceArea = surfaceHeight * surfaceWidth;
         // round the tile area to 3 decimal places
         surfaceArea = surfaceArea.toFixed(3);
+
+        // create a new surface struct and store it in the currentMaterial object
+        var surface = new Surface(surfaceName, surfaceHeight, surfaceWidth);
+        addSurface(currentMaterial, surface);
+
         // create a button that will remove the row from the table when clicked
-        var removeButton = "<button class='remove-surface-button rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue'>Remove</button>";
+        var removeButton = "<button id=" + surface.id + " class='remove-surface-button rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue'>Remove</button>";
         // add the new row to the surface table with the surface name, height, width, area, and remove button
         $("#surface-table").append("<tr><td>" + surfaceName + "</td><td>" + surfaceHeight + "</td><td>" + surfaceWidth + "</td><td>" + surfaceArea + "</td><td>" + removeButton + "</td></tr>");
         // add the area of the new surface to the total area and update the total area span
-        var totalArea = $("#total-area").attr("value");
-        totalArea = parseFloat(totalArea);
-        totalArea += parseFloat(surfaceArea);
+        var totalArea = currentMaterial.totalArea;
+
         $("#total-area").attr("value", (totalArea).toString());
         $("#total-area").text($("#total-area").attr("value"));
         // clear the input fields
@@ -481,11 +543,17 @@ $(document).ready(function(){
 // and subtract the area of the surface from the total area
 $(document).on("click", ".remove-surface-button", function(){
     // get the area of the surface that is being removed
-    var surfaceArea = $(this).parent().prev().text();
+    // var surfaceArea = currentMaterial.surfaces[$(this).attr("id")].area;
+    // var surfaceArea = $(this).parent().prev().text();
+
+    // remove the surface from the currentMaterial object
+    removeSurface(currentMaterial, currentMaterial.surfaces[$(this).attr("id")]);
+    var totalArea = currentMaterial.totalArea;
+
     // subtract the area of the surface from the total area
-    $("#total-area").attr("value", (parseFloat($("#total-area").attr("value")) - surfaceArea).toString());
+    $("#total-area").attr("value", (totalArea).toString());
     // round the total area to 3 decimal places
-    $("#total-area").attr("value", parseFloat($("#total-area").attr("value")).toFixed(3));
+    $("#total-area").attr("value", totalArea.toFixed(3));
     $("#total-area").text($("#total-area").attr("value"));
     // remove the row from the table
     $(this).parent().parent().remove();
@@ -493,21 +561,36 @@ $(document).on("click", ".remove-surface-button", function(){
 
 // when the remove-cost button is clicked, remove the selected cost from the estimated costs select element, and reduce the size by 1
 $(document).on("click", ".remove-material-cost", function(){
-    var costToRemove = document.querySelector("#estimated-material-costs").value;
+
+    // get the id of the selected option
+    var id = $("#estimated-material-costs option:selected").attr("id");
+    var costToRemove = materialList[id].totalCost;
+    totalMaterialEst = totalMaterialEst - parseFloat(costToRemove);
+    console.log("cost to remove: " + costToRemove);
+
     // remove the selected option from the estimated-costs select element
     $("#estimated-material-costs option:selected").remove();
     // decrease the size of the estimated-costs select element by 1
     $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) - 1).toString());
 
-    totalMaterialEst -= parseFloat(costToRemove);
-    totalEstimation = totalMaterialEst + totalLaborEst;
-    // update the total cost paragraph
-    $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
-    $("#total-material-estimate").text("$" + totalMaterialEst.toFixed(2));
+    updateEstimation();
 
-    // update estimated profit span
-    $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
-    $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
+
+    // var costToRemove = document.querySelector("#estimated-material-costs").value;
+    // // remove the selected option from the estimated-costs select element
+    // $("#estimated-material-costs option:selected").remove();
+    // // decrease the size of the estimated-costs select element by 1
+    // $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) - 1).toString());
+
+    // totalMaterialEst -= parseFloat(costToRemove);
+    // totalEstimation = totalMaterialEst + totalLaborEst;
+    // // update the total cost paragraph
+    // $("#total-overall-cost").text("$" + totalEstimation.toFixed(2));
+    // $("#total-material-estimate").text("$" + totalMaterialEst.toFixed(2));
+
+    // // update estimated profit span
+    // $("#estimated-profit").text("$" + (totalLaborEst - totalMaterialEst).toFixed(2));
+    // $("#estimated-profit").attr("value", (totalLaborEst - totalMaterialEst).toFixed(2));
 });
 
 
