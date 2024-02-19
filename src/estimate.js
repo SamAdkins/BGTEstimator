@@ -228,7 +228,7 @@ $(document).ready(function(){
             // update the price slider to match the range of the job
             $("#price-slider").attr("min", jobTypes[$("#job-selector").val()]["minPrice"]);
             $("#price-slider").attr("max", jobTypes[$("#job-selector").val()]["maxPrice"]);
-            $("#price-slider").attr("value", jobTypes[$("#job-selector").val()]["Price"]);
+            $("#price-slider").val(jobTypes[$("#job-selector").val()]["Price"]);
             // update the price value span to match the price of the job
             $("#price-value").text(jobTypes[$("#job-selector").val()]["Price"]);
             // show the price slider
@@ -279,14 +279,26 @@ $(document).on("input", "#vibe-slider", function(){
     
     // add an option to the estimated-costs select box
     if ($("#estimated-labor-costs").find("#vibe-cost-adjustment").length == 0){
-        $("#estimated-labor-costs").append("<option id='vibe-cost-adjustment' value=" + $(this).val() + ">Multiplier: x" + $(this).val() + " - $" + ($(this).val() * totalLaborEst) + "</option>");
+        $("#estimated-labor-costs").append("<option id='vibe-cost-adjustment' value=" + $(this).val() + ">Multiplier: x" + $(this).val() + " - $" + ($(this).val() * totalLaborEst).toFixed(2) + "</option>");
         $("#estimated-labor-costs").attr("size", (parseInt($("#estimated-labor-costs").attr("size")) + 1).toString());
     }
     else{
         $("#estimated-labor-costs").find("#vibe-cost-adjustment").attr("value", $(this).val());
-        var addCost = totalLaborEst - ($(this).val() * totalLaborEst);
+        var addCost = ($(this).val() * totalLaborEst) - totalLaborEst;
         $("#estimated-labor-costs").find("#vibe-cost-adjustment").text("Multiplier: x" + $(this).val() + " - $" + addCost.toFixed(2));
     }
+});
+
+// reset the vibe slider and vibe value span to 1 when the reset-vibe button is clicked
+$(document).on("click", "#reset-vibes", function(){
+    $("#vibe-slider").val(1);
+    $("#vibe-value").text(1);
+    $("#vibe-value").attr("value", 1);
+    laborMultiplier = 1;
+    updateEstimation();
+    // remove the vibe cost adjustment from the estimated-costs select box
+    $("#estimated-labor-costs").find("#vibe-cost-adjustment").remove();
+    $("#estimated-labor-costs").attr("size", (parseInt($("#estimated-labor-costs").attr("size")) - 1).toString());
 });
 
 
@@ -389,7 +401,7 @@ $(document).on("click", "#add-labor-cost", function(){
     // reset the labor-units input
     $("#labor-units").val("");
     // reset the price slider
-    $("#price-slider").val(0);
+    $("#price-slider").val(1);
     // reset the price value span
     $("#price-value").text("0");
     // hide the price slider
@@ -440,7 +452,7 @@ $(document).on("click", ".remove-labor-cost", function(){
     // reset the labor-units input
     $("#labor-units").val("");
     // reset the price slider
-    $("#price-slider").val(0);
+    $("#price-slider").val(1);
     // reset the price value span
     $("#price-value").text("0");
     // hide the price slider
