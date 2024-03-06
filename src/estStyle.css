@@ -818,6 +818,10 @@ h1, h2, h3, h4, h5, h6 {
   display: block;
 }
 
+.peer:has(#material-vibes:checked) ~ .peer-has-\[\#material-vibes\:checked\]\:block {
+  display: block;
+}
+
 .peer:has(#other-material:checked) ~ .peer-has-\[\#other-material\:checked\]\:block {
   display: block;
 }
@@ -836,6 +840,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .peer:has(:checked) ~ .peer-has-\[\:checked\]\:block {
   display: block;
+}
+
+.peer:has(#material-vibes:checked) ~ .peer-has-\[\#material-vibes\:checked\]\:hidden {
+  display: none;
 }
 
 .peer:has(#none:checked) ~ .peer-has-\[\#none\:checked\]\:hidden {
