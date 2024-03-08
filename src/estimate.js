@@ -48,6 +48,7 @@ function Job(jobType, maxPrice, minPrice, price, units){
     this.units = units;
     this.totalCost = this.price * this.units;
     this.modifiedCost = this.totalCost;
+    this.materialsNeeded = {};
 }
 
 /*
@@ -122,7 +123,13 @@ function updateEstimation(){
     }
     // update the costs in the estimated material costs section to show the modifiedCost of each material
     for (var key in materialList){
-        $("#estimated-material-costs").find("#" + key).text(materialList[key].name + " - $" + materialList[key].modifiedCost.toFixed(2));
+        // if the material type is not null, update the text of the option in the estimated-material-costs select box to show the modified cost of the material
+        if (materialList[key].type != ""){
+            $("#estimated-material-costs").find("#" + key).text(materialList[key].name + " - " + materialList[key].type + " - $" + materialList[key].modifiedCost.toFixed(2));
+        }
+        else {
+            $("#estimated-material-costs").find("#" + key).text(materialList[key].name + " - $" + materialList[key].modifiedCost.toFixed(2));
+        }
     }
     // total Material Estimation should be the sum of the modifiedCost of each material in the materialList
     totalMaterialEst = 0;
@@ -188,6 +195,14 @@ $(document).ready(function(){
                             currentLine[j] = currentLine[j].replace(match[1], match[0]);
                         }
                     }
+                    // if the currentline has any \r characters, remove them
+                    if (currentLine[j].includes("\r")){
+                        currentLine[j] = currentLine[j].replace(/\r/g, '');
+                    }
+                    // if the current header has any \r characters, remove them
+                    if (headers[j].includes("\r")){
+                        headers[j] = headers[j].replace(/\r/g, '');
+                    }
                     obj[headers[j]] = currentLine[j];
                 }
                 // if the line item has no price, skip it
@@ -202,7 +217,7 @@ $(document).ready(function(){
                 newOpt = document.createElement("option");
                 var priceString = result[i]["Price"];
                 // create a json object with the job type, max price, min price, price, and units
-                jobTypes[result[i]["Line Item"]] = {"maxPrice": 0, "minPrice": 0, "price": 0, "units": result[i]["Units"]};
+                jobTypes[result[i]["Line Item"]] = {"maxPrice": 0, "minPrice": 0, "price": 0, "units": result[i]["Units"], "materialsNeeded": {}};
 
                 // if the price is a range, create minPrice and maxPrice attributes for the option
                 if (priceString.includes("-")){
@@ -236,6 +251,25 @@ $(document).ready(function(){
                     // update the jobtypes json object with the price
                     jobTypes[result[i]["Line Item"]]["Price"] = priceString;
                 }
+                // if the materials needed have commas, break the contents of the materials needed into an array
+                var materials = [];
+                if (result[i]["Materials"].includes(";")){
+                    console.log("contains ;");
+                    var materials = result[i]["Materials"].split(";");
+                    for (var j = 0; j < materials.length; j++){
+                        materials[j] = materials[j].trim();
+                    }
+                }
+                else{
+                    materials = result[i]["Materials"].split(",");
+                }
+
+                // for every material in materials, create a new material from the string value and add it to the materialsNeeded object in the jobTypes object
+                for (var j = 0; j < materials.length; j++){
+                    var material = createMaterialFromString(materials[j]);
+                    jobTypes[result[i]["Line Item"]]["materialsNeeded"][material.name] = material;
+                    // console.log("material in load: " + JSON.stringify(jobTypes[result[i]["Line Item"]]["materialsNeeded"][material.name]));
+                }
                 newOpt.value = result[i]["Line Item"];
                 $("#job-type-datalist").append(newOpt);
             }
@@ -245,7 +279,12 @@ $(document).ready(function(){
     });
 });
 
-
+// given a string, try to create a material objec with the type that matches the string (e.g. "Tile")
+function createMaterialFromString(materialType){
+    materialType = materialType.charAt(0).toUpperCase() + materialType.slice(1);;
+    var material = new Material(materialType, "", 0, 0);
+    return material;
+}
 
 // when the job-selector input is changed, update the labor-units-label to match the units of the job
 $(document).ready(function(){
@@ -427,6 +466,9 @@ $(document).on("click", "#add-labor-cost", function(){
         // get the price of the labor
         var price = jobTypes[jobType]["Price"];
 
+        var materials = jobTypes[jobType]["materialsNeeded"];
+        console.log("materials on select: " + JSON.stringify(materials));
+
         // create a job struct representing the selected job and store it in the jobList array
         job = new Job(jobType, jobTypes[jobType]["maxPrice"], jobTypes[jobType]["minPrice"], price, units);
         jobList[job.id] = job;
@@ -435,6 +477,27 @@ $(document).on("click", "#add-labor-cost", function(){
         $("#estimated-labor-costs").append("<option value=" + totalLaborCost + " id=" + job.id + ">" + jobType + " - $" + job.totalCost + "</option>");
         // increase the size of the estimated-costs select element by 1 to fit the new option
         $("#estimated-labor-costs").attr("size", (parseInt($("#estimated-labor-costs").attr("size")) + 1).toString());
+
+        for (var key in materials){
+            console.log("material: " + key);
+            var material = materials[key];
+            if (materialList[material.id] != null){
+                materialList[material.id].units += parseFloat(material.units);
+                materialList[material.id].totalCost = materialList[material.id].costPer * materialList[material.id].units;
+                materialList[material.id].modifiedCost = materialList[material.id].totalCost * materialMultiplier;
+            }
+            else {
+                materialList[material.id] = material;
+                materialList[material.id].modifiedCost = materialList[material.id].totalCost * materialMultiplier;
+            }
+            // add the material to the estimated-material-costs select box
+            $("#estimated-material-costs").append("<option value=" + materialList[material.id].totalCost + " id=" + material.id + ">" + materialList[material.id].name + " - $" + materialList[material.id].totalCost + "</option>");
+            // increase the size of the estimated-costs select element by 1 to fit the new option
+            $("#estimated-material-costs").attr("size", (parseInt($("#estimated-material-costs").attr("size")) + 1).toString());
+            // deselect the selected option
+            $("#estimated-material-costs").prop("selectedIndex", -1);
+
+        }
 
     }
     
@@ -466,9 +529,6 @@ $(document).on("click", "#add-labor-cost", function(){
 
 // when the remove-labor-cost button is clicked, remove the selected cost from the estimated costs select element, and reduce the size by 1
 $(document).on("click", ".remove-labor-cost", function(){
-
-    // var multiplier = 1;
-    // var estimatedProfit = 0;
 
     // get the id of the selected option
     var id = $("#estimated-labor-costs option:selected").attr("id");
@@ -533,6 +593,8 @@ function clearMaterialForm() {
     
     // reset all form inputs
     // $("#material-costs-input-form").trigger("reset");
+    // unselect any options from the material dropdown
+    $("#material").prop("selectedIndex", -1);
     $("#surface-table tbody").empty();
     $("#total-area").attr("value", "0");
     $("#total-area").text("0");
@@ -563,10 +625,25 @@ $(document).on("input", "#estimated-material-costs", function(){
     console.log("current material: " + JSON.stringify(currentMaterial));
 
     totalMaterialEst = totalMaterialEst - currentMaterial.totalCost;
-
-    // select the material from the material dropdown
+    
     var materialName = currentMaterial.name;
-    $("#material").val(materialName.toLowerCase());
+    // console.log("material name: " + materialName);
+    // cycle through the values of the options in the material dropdown, and check if the value matches the materialName
+    // if none match, select the "other" option
+    var found = false;
+    $("#material option").each(function(){
+        if ($(this).val().toLowerCase() == materialName.toLowerCase()){
+            found = true;
+        }
+    });
+    // select the material from the material dropdown
+    if (found){
+        $("#material").val(materialName.toLowerCase());
+    }
+    else {
+        $("#material").val("other");
+        $("#material-name").val(materialName);
+    }
     
     // set the text of the submit button to update
     $("#add-material-button").val("Update");
@@ -637,8 +714,10 @@ $(document).ready(function(){
         if (currentMaterial != null && materialList[currentMaterial.id] != null){
             // update the option in the estimated-costs select box
             $("#estimated-material-costs").find("#" + currentMaterial.id).attr("value", materialList[currentMaterial.id].totalCost.toFixed(2));
-            if (currentMaterial.name == "Tile"){
+            if (currentMaterial.name == "Tile" && currentMaterial.type != ""){
+                console.log($("#estimated-material-costs").find("#" + currentMaterial.id).text());
                 $("#estimated-material-costs").find("#" + currentMaterial.id).text(currentMaterial.name + " - " + currentMaterial.type + " - $" + materialList[currentMaterial.id].totalCost.toFixed(2));
+                console.log($("#estimated-material-costs").find("#" + currentMaterial.id).text());
             }
             else {
                 $("#estimated-material-costs").find("#" + currentMaterial.id).text(currentMaterial.name + " - $" + materialList[currentMaterial.id].totalCost.toFixed(2));
@@ -648,12 +727,12 @@ $(document).ready(function(){
         }
         else {
 
-            console.log("current material 2: " + JSON.stringify(currentMaterial));
+            // console.log("current material 2: " + JSON.stringify(currentMaterial));
             
             // add the currentMaterial to the materialList array
             currentMaterial.modifiedCost = currentMaterial.totalCost;
             materialList[currentMaterial.id] = currentMaterial;
-            console.log("material list: " + JSON.stringify(materialList));
+            // console.log("material list: " + JSON.stringify(materialList));
 
             // create an option with the current material and append it to the estimated-material-costs select box
             var newMaterial = document.createElement("option");
@@ -705,8 +784,8 @@ $(document).ready(function(){
 
         // create a new surface struct and store it in the currentMaterial object
         var surface = new Surface(surfaceName, surfaceHeight, surfaceWidth);
-        console.log(currentMaterial);
-        console.log(surface);
+        // console.log(currentMaterial);
+        // console.log(surface);
         addSurface(currentMaterial, surface);
 
         // create a button that will remove the row from the table when clicked
@@ -729,10 +808,6 @@ $(document).ready(function(){
 // when the remove button is clicked in the surface table, remove the row from the table
 // and subtract the area of the surface from the total area
 $(document).on("click", ".remove-surface-button", function(){
-    // get the area of the surface that is being removed
-    // var surfaceArea = currentMaterial.surfaces[$(this).attr("id")].area;
-    // var surfaceArea = $(this).parent().prev().text();
-
     // remove the surface from the currentMaterial object
     removeSurface(currentMaterial, currentMaterial.surfaces[$(this).attr("id")]);
     var totalArea = currentMaterial.totalArea;
