@@ -858,4 +858,136 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+@media (min-width: 640px) {
+  @media not all and (min-width: 768px) {
+    .sm\:max-md\:col-span-3 {
+      grid-column: span 3 / span 3;
+    }
+
+    .sm\:max-md\:col-span-4 {
+      grid-column: span 4 / span 4;
+    }
+
+    .sm\:max-md\:col-span-2 {
+      grid-column: span 2 / span 2;
+    }
+
+    .sm\:max-md\:col-start-1 {
+      grid-column-start: 1;
+    }
+
+    .sm\:max-md\:col-start-2 {
+      grid-column-start: 2;
+    }
+
+    .sm\:max-md\:row-start-2 {
+      grid-row-start: 2;
+    }
+
+    .sm\:max-md\:row-start-1 {
+      grid-row-start: 1;
+    }
+
+    .sm\:max-md\:m-1 {
+      margin: 0.25rem;
+    }
+
+    .sm\:max-md\:m-0 {
+      margin: 0px;
+    }
+
+    .sm\:max-md\:mx-10 {
+      margin-left: 2.5rem;
+      margin-right: 2.5rem;
+    }
+
+    .sm\:max-md\:my-5 {
+      margin-top: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .sm\:max-md\:grid {
+      display: grid;
+    }
+
+    .sm\:max-md\:size-fit {
+      width: -moz-fit-content;
+      width: fit-content;
+      height: -moz-fit-content;
+      height: fit-content;
+    }
+
+    .sm\:max-md\:size-1\/2 {
+      width: 50%;
+      height: 50%;
+    }
+
+    .sm\:max-md\:h-2 {
+      height: 0.5rem;
+    }
+
+    .sm\:max-md\:h-4 {
+      height: 1rem;
+    }
+
+    .sm\:max-md\:h-40 {
+      height: 10rem;
+    }
+
+    .sm\:max-md\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sm\:max-md\:grid-cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .sm\:max-md\:grid-rows-2 {
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+
+    .sm\:max-md\:grid-rows-4 {
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+    }
+
+    .sm\:max-md\:gap-y-10 {
+      row-gap: 2.5rem;
+    }
+
+    .sm\:max-md\:gap-y-20 {
+      row-gap: 5rem;
+    }
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:col-start-1 {
+    grid-column-start: 1;
+  }
+
+  .md\:col-start-2 {
+    grid-column-start: 2;
+  }
+
+  .md\:row-start-2 {
+    grid-row-start: 2;
+  }
+
+  .md\:m-1 {
+    margin: 0.25rem;
+  }
+
+  .md\:grid {
+    display: grid;
+  }
+
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .md\:grid-rows-2 {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+}
+
 

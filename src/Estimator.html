@@ -17,6 +17,8 @@
     * Figure out where to add in the labor cost calculations
         - either in the job selection list, or in the material dropdown 
     * Finish up the aesthetic design elements so it looks nice 
+        - update so that when the screen size changes (squish to half screen, they like to have multiple pages open side-by-side),
+          it is still usable
     * Maybe: Figure out how to get the favicon working-->
 
 <!DOCTYPE html>
@@ -41,23 +43,22 @@
 
 <body>
     <!-- Header with logo and Company Name -->
-    <header class="flex items-center bg-bgt-blue">
-        <img src="../images/BryantGroutandTileLOGO.webp" alt="BGT Logo" class="ml-6 mt-5 mb-6 size-1/12">
-        <h1 class="text-white ml-10 text-3xl font-semibold">Bryant Grout and Tile Estimation Helper</h1>
+    <header class="flex items-center bg-bgt-blue sm:max-md:grid sm:max-md:grid-rows-2 sm:max-md:grid-cols-4 sm:max-md:h-40">
+        <img src="../images/BryantGroutandTileLOGO.webp" alt="BGT Logo" class="ml-6 mt-5 mb-6 size-1/12 sm:max-md:m-0 sm:max-md:size-fit">
+        <h1 class="text-white ml-10 text-3xl font-semibold sm:max-md:col-start-2 sm:max-md:col-span-3">Bryant Grout and Tile Estimation Helper</h1>
         <!-- select a csv file to fill out the labor cost combobox -->
-        <form action="" class="ml-10 text-white justify-self-end ">
+        <form action="" class="ml-10 text-white justify-self-end sm:max-md:row-start-2 sm:max-md:col-span-4">
             <label for="labor-costs">Update Google Sheet:</label>
             <input type="file" id="labor-costs" name="labor-costs" accept=".csv">
         </form>
         
     </header>
 
-    <div id="body" class="m-10 ml-5">
+    <div id="body" class="m-10 ml-5 sm:max-md:m-1">
         <!-- Form for entering job information -->
         <!-- checkboxes for selecting job type. Multiple types of jobs can be selected at once -->
-        <div class="input-boxes grid grid-cols-4 gap-8 mx-32 justify-items-start">
-            <!-- this is useless right now, but in the future the type of job may have an impace I am not aware of on the estimation! -->
-            
+        <div class="input-boxes grid grid-cols-4 gap-8 mx-32 justify-items-start sm:max-md:grid-cols-2 sm:max-md:mx-10 sm:max-md:gap-y-15 sm:max-md:my-5">
+
             <!-- labor cost calcualtions -->
             <div class="labor-cost-box justify-evenly w-full col-span-1 row-start-1 col-start-1 space-y-3">
                 <h2>Labor Cost Information</h2>
@@ -195,24 +196,33 @@
             </div>
 
             <!-- select box that stores the entered material costs from the material cost form -->
-            <div class="cost-box w-full col-span-1">
-                <h2 class="font-bold text-xl">Total Cost:</h2>
-                <p id="total-overall-cost" class="font-semibold text-lg" value="0">$0.00</p> 
-                <br>
+            <div class="cost-box w-full col-span-1 sm:max-md:col-span-2 sm:max-md:grid sm:max-md:grid-cols-2 sm:max-md:grid-rows-2 sm:max-md:gap-y-10">
+                <div id="total-cost-label" class="sm:max-md:col-start-1 sm:max-md:row-start-2">
+                    <h2 class="font-bold text-xl">Total Cost:</h2>
+                    <p id="total-overall-cost" class="font-semibold text-lg" value="0">$0.00</p> 
+                    <br>
+                </div>
 
-                <h2>Material Costs: <span id="total-material-estimate"></span></h2>
-                <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-fit">
-                </select>
-                <input type="button" class="remove-material-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
-                <br>
-                <h2>Labor Costs: <span id="total-labor-estimate"></span></h2>
-                <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-fit">
-                </select>
-                <input type="button" class="remove-labor-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
-            
-                <br>
-                <h2>Estimated Profit:</h2> <span class="text-dark-grey">(Labor Cost - Material Cost)</span>
-                <p id="estimated-profit" class="font-semibold text-lg" value="0">$0.00</p>
+                <div id="labor-cost-display" class="sm:max-md:col-start-1 sm:max-md:row-start-1">
+                    <h2>Labor Costs: <span id="total-labor-estimate"></span></h2>
+                    <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-fit">
+                    </select>
+                    <input type="button" class="remove-labor-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
+                    <br>
+                </div>
+
+                <div id="material-cost-display" class="sm:max-md:col-start-2 sm:max-md:row-start-1">
+                    <h2>Material Costs: <span id="total-material-estimate"></span></h2>
+                    <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-fit">
+                    </select>
+                    <input type="button" class="remove-material-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
+                    <br>
+                </div>
+
+                <div id="estimated-profit-display" class="sm:max-md:col-start-2 sm:max-md:row-start-2">
+                    <h2>Estimated Profit:</h2> <span class="text-dark-grey">(Labor Cost - Material Cost)</span>
+                    <p id="estimated-profit" class="font-semibold text-lg" value="0">$0.00</p>
+                </div>
             </div>
             
         </div>
