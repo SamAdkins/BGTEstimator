@@ -8,4 +8,21 @@ h1, h2, h3, h4, h5, h6 {
   font-size: larger;
 }
 
+#estimated-labor-costs
+{
+  background-color: white;
+}
+#estimated-labor-costs option:nth-child(2n+1)
+{
+  background-color: #51798940;
+}
+
+#estimated-material-costs
+{
+  background-color: white;
+}
+#estimated-material-costs option:nth-child(2n+1)
+{
+  background-color: #51798940;
+}
 

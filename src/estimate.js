@@ -474,7 +474,7 @@ $(document).on("click", "#add-labor-cost", function(){
         jobList[job.id] = job;
         
         // add the labor cost to the estimated-labor-costs select box
-        $("#estimated-labor-costs").append("<option value=" + totalLaborCost + " id=" + job.id + ">" + jobType + " - $" + job.totalCost + "</option>");
+        $("#estimated-labor-costs").append("<option value=" + totalLaborCost + " id=" + job.id + " class= sm:max-md:text-pretty>" + jobType + " - $" + job.totalCost + "</option>");
         // increase the size of the estimated-costs select element by 1 to fit the new option
         $("#estimated-labor-costs").attr("size", (parseInt($("#estimated-labor-costs").attr("size")) + 1).toString());
 

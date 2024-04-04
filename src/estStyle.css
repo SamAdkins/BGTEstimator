@@ -805,6 +805,26 @@ h1, h2, h3, h4, h5, h6 {
   font-size: larger;
 }
 
+#estimated-labor-costs
+{
+  background-color: white;
+}
+
+#estimated-labor-costs option:nth-child(2n+1)
+{
+  background-color: #51798940;
+}
+
+#estimated-material-costs
+{
+  background-color: white;
+}
+
+#estimated-material-costs option:nth-child(2n+1)
+{
+  background-color: #51798940;
+}
+
 .hover\:bg-bgt-dark-blue:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(68 101 115 / var(--tw-bg-opacity));
@@ -880,10 +900,6 @@ h1, h2, h3, h4, h5, h6 {
       grid-column-start: 2;
     }
 
-    .sm\:max-md\:col-start-3 {
-      grid-column-start: 3;
-    }
-
     .sm\:max-md\:row-start-1 {
       grid-row-start: 1;
     }
@@ -924,16 +940,16 @@ h1, h2, h3, h4, h5, h6 {
       height: 10rem;
     }
 
+    .sm\:max-md\:w-full {
+      width: 100%;
+    }
+
     .sm\:max-md\:grid-cols-2 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .sm\:max-md\:grid-cols-4 {
       grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .sm\:max-md\:grid-cols-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .sm\:max-md\:grid-rows-2 {
@@ -943,7 +959,10 @@ h1, h2, h3, h4, h5, h6 {
     .sm\:max-md\:gap-y-10 {
       row-gap: 2.5rem;
     }
+
+    .sm\:max-md\:text-pretty {
+      text-wrap: pretty;
+    }
   }
 }
-
 

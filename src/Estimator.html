@@ -196,30 +196,30 @@
             </div>
 
             <!-- select box that stores the entered material costs from the material cost form -->
-            <div class="cost-box w-full col-span-1 sm:max-md:col-span-2 sm:max-md:grid sm:max-md:grid-cols-3 sm:max-md:grid-rows-2 sm:max-md:gap-y-10">
-                <div id="total-cost-label" class="sm:max-md:col-start-2 sm:max-md:row-start-2">
+            <div class="cost-box w-full col-span-1 sm:max-md:col-span-2 sm:max-md:grid sm:max-md:grid-cols-2 sm:max-md:grid-rows-2 sm:max-md:gap-y-10">
+                <div id="total-cost-label" class="sm:max-md:col-start-1 sm:max-md:row-start-2">
                     <h2 class="font-bold text-xl">Total Cost:</h2>
                     <p id="total-overall-cost" class="font-semibold text-lg" value="0">$0.00</p> 
                     <br>
                 </div>
 
-                <div id="labor-cost-display" class="sm:max-md:col-start-1 sm:max-md:col-span-2 sm:max-md:row-start-1">
+                <div id="labor-cost-display" class="sm:max-md:col-start-1 sm:max-md:row-start-1">
                     <h2>Labor Costs: <span id="total-labor-estimate"></span></h2>
-                    <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-fit">
+                    <select name="estimated-labor-costs" id="estimated-labor-costs" size="1" class="peer w-fit sm:max-md:w-full">
                     </select>
                     <input type="button" class="remove-labor-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
                     <br>
                 </div>
 
-                <div id="material-cost-display" class="sm:max-md:col-start-3 sm:max-md:row-start-1">
+                <div id="material-cost-display" class="sm:max-md:col-start-2 sm:max-md:row-start-1">
                     <h2>Material Costs: <span id="total-material-estimate"></span></h2>
-                    <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-fit">
+                    <select name="estimated-material-costs" id="estimated-material-costs" size="1" class="peer w-fit  sm:max-md:w-full">
                     </select>
                     <input type="button" class="remove-material-cost hidden peer-has-[:checked]:block rounded-sm bg-bgt-blue p-1 text-white hover:bg-bgt-dark-blue" value="Remove Item">
                     <br>
                 </div>
 
-                <div id="estimated-profit-display" class="sm:max-md:col-start-3 sm:max-md:row-start-2">
+                <div id="estimated-profit-display" class="sm:max-md:col-start-2 sm:max-md:row-start-2">
                     <h2>Estimated Profit:</h2> <span class="text-dark-grey">(Labor Cost - Material Cost)</span>
                     <p id="estimated-profit" class="font-semibold text-lg" value="0">$0.00</p>
                 </div>
